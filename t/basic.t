@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 34;
+use Test::More tests => 50;
 use Test::Exception;
 
 { package Trait;
@@ -41,22 +41,52 @@ throws_ok {
     Class->new_with_traits( traits => ['Trait'] );
 } qr/required/, 'foo is required';
 
+throws_ok {
+    my $class = Class->new_class_with_traits( traits => ['Trait'] );
+	$class->name->new();
+} qr/required/, 'foo is required';
+
 {
     my $instance = Class->new_with_traits;
     isa_ok $instance, 'Class';
     ok !$instance->can('foo'), 'this one cannot foo';
 }
+
+{
+    my $class = Class->new_class_with_traits;
+	my $instance = $class->name->new();
+	isa_ok $instance, 'Class';
+    ok !$instance->can('foo'), 'this one cannot foo';
+}
+
 {
     my $instance = Class->new_with_traits( traits => [] );
     isa_ok $instance, 'Class';
     ok !$instance->can('foo'), 'this one cannot foo either';
 }
+
+{
+    my $class = Class->new_class_with_traits( traits => [] );
+	my $instance = $class->name->new();
+    isa_ok $instance, 'Class';
+    ok !$instance->can('foo'), 'this one cannot foo either';
+}
+
 {
     my $instance = Another::Class->new_with_traits( traits => ['Trait'], bar => 'bar' );
     isa_ok $instance, 'Another::Class';
     can_ok $instance, 'bar';
     is $instance->bar, 'bar';
 }
+
+{
+    my $class = Another::Class->new_class_with_traits( traits => ['Trait'] );
+	my $instance = $class->name->new (bar => 'bar');
+    isa_ok $instance, 'Another::Class';
+    can_ok $instance, 'bar';
+    is $instance->bar, 'bar';
+}
+
 # try hashref form
 {
     my $instance = Another::Class->new_with_traits({ traits => ['Trait'], bar => 'bar' });
@@ -64,9 +94,33 @@ throws_ok {
     can_ok $instance, 'bar';
     is $instance->bar, 'bar';
 }
+
+{
+    my $class = Another::Class->new_class_with_traits({ traits => ['Trait']});
+	my $instance = $class->name->new({ bar => 'bar' });
+    isa_ok $instance, 'Another::Class';
+    can_ok $instance, 'bar';
+    is $instance->bar, 'bar';
+}
+
 {
     my $instance = Another::Class->new_with_traits(
         traits   => ['Trait', '+Trait'],
+        foo      => 'foo',
+        bar      => 'bar',
+    );
+    isa_ok $instance, 'Another::Class';
+    can_ok $instance, 'foo';
+    can_ok $instance, 'bar';
+    is $instance->foo, 'foo';
+    is $instance->bar, 'bar';
+}
+
+{
+    my $class = Another::Class->new_class_with_traits(
+        traits   => ['Trait', '+Trait'],
+	);
+	my $instance = $class->name->new(
         foo      => 'foo',
         bar      => 'bar',
     );

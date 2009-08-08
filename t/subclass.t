@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 3;
+use Test::More tests => 9;
 use Test::Exception;
 
 { package Foo;
@@ -17,6 +17,7 @@ use Test::Exception;
   sub foo { return 42 };
 }
 
+{
 my $instance;
 lives_ok {
     $instance = Bar->new_with_traits( traits => ['Trait'] );
@@ -24,3 +25,18 @@ lives_ok {
 
 ok $instance->does('Trait'), 'instance does trait';
 is $instance->foo, 42, 'trait works';
+}
+
+{
+	my $class;
+	my $instance;
+	lives_ok {
+		$class = Bar->new_class_with_traits ( traits => ['Trait'] );
+		isa_ok($class, 'Moose::Meta::Class', 'return class is a meta object');
+		$instance = $class->name()->new();
+		isa_ok($instance, 'Bar', 'class isa Bar');
+		isa_ok ($instance, 'Foo', 'class isa Foo');
+		ok $instance->does('Trait'), 'classs does trait';
+		is $instance->foo, 42, 'trait works';
+	}
+}

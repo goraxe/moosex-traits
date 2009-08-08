@@ -1,3 +1,4 @@
+# vim: et
 package MooseX::Traits;
 use Moose::Role;
 
@@ -53,16 +54,7 @@ sub new_with_traits {
 
     if (my $traits = delete $args{traits}) {
         if(@$traits){
-            $traits = [$class->$resolve_traits(@$traits)];
-
-            my $meta = $class->meta->create_anon_class(
-                superclasses => [ $class->meta->name ],
-                roles        => $traits,
-                cache        => 1,
-            );
-
-            $meta->add_method('meta' => sub { $meta });
-            $class = $meta->name;
+            $class = $class->new_class_with_traits ( traits => $traits )->name;
         }
     }
 
@@ -71,6 +63,33 @@ sub new_with_traits {
       if !$constructor;
 
     return $class->$constructor($hashref ? \%args : %args);
+}
+
+
+sub new_class_with_traits {
+    my $class = shift;
+
+    my %args;
+    if (ref($_[0]) eq 'HASH') {
+        %args = %{ +shift };
+    } else {
+        %args = @_;
+    }
+    my $traits = $args{traits};
+
+    my $meta;
+    $traits = [ $class->$resolve_traits(@$traits)];
+    if (@$traits) {
+        $meta = $class->meta->create_anon_class(
+            superclasses => [ $class->meta->name ],
+            roles        => $traits,
+            cache        => 1,
+        );
+        $meta->add_method('meta' => sub { $meta });
+    }
+
+    # if no traits were given just return the class meta
+    return $meta ? $meta : $class->meta;
 }
 
 sub apply_traits {
@@ -115,13 +134,18 @@ And a class:
 
 Apply the roles to the class at C<new> time:
 
-  my $class = Class->new_with_traits( traits => ['Role'], foo => 42 );
+  my $instance = Class->new_with_traits( traits => ['Role'], foo => 42 );
+
+Or get the class meta object and use that to get an instance
+
+  my $class = Class->new_class_with_traits( traits => ['Role'] );
+  my $instance = $class->name->new(foo => 42);
 
 Then use your customized class:
 
-  $class->isa('Class'); # true
-  $class->does('Role'); # true
-  $class->foo; # 42
+  $instance->isa('Class'); # true
+  $instance->does('Role'); # true
+  $instance->foo; # 42
 
 To apply traits to an existing instance:
 
@@ -148,6 +172,8 @@ arguments for initializing attributes in consumed roles can be in C<%$self>
 =over 4
 
 =item B<< $class->new_with_traits(%args, traits => \@traits) >>
+
+=item B<< my $class = Class->new_class_with_traits (traits => \@traits) >>
 
 C<new_with_traits> can also take a hashref, e.g.:
 
